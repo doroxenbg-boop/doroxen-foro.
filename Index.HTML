@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Foro Doroxen</title>
+<style>
+:root{
+--bg:#0a1420;--bg2:#0e1c2e;--panel:#122238;--panel2:#16283f;
+--line:#213551;--prim:#22b8f0;--prim2:#5fd4ff;--gold:#f5c344;
+--green:#2fd191;--red:#f0576a;--purple:#9f7bf0;--orange:#f0954a;
+--text:#e8f1fb;--muted:#8ba3c4
+}
+*{box-sizing:border-box}html,body{width:100%;overflow-x:hidden}body{margin:0;background:linear-gradient(135deg,var(--bg),#08111d);
+color:var(--text);font-family:Arial,sans-serif}button,input,textarea,select{font:inherit}
+button{cursor:pointer;border:0}.wrap{max-width:1150px;margin:auto;padding:18px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
+.logo{font-size:28px;font-weight:900;color:var(--prim2)}.logo span{color:var(--gold)}
+.top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.pill,.btn{background:var(--panel2);color:var(--text);border:1px solid var(--line);padding:9px 12px;border-radius:10px}
+.btn.primary{background:var(--prim);color:#04121b}.btn.danger{background:#461d28}.btn.green{background:#123f32}.btn.gold{background:#493b14}
+.card{background:rgba(18,34,56,.96);border:1px solid var(--line);border-radius:15px;padding:16px;margin-bottom:15px;box-shadow:0 8px 30px #0002}
+.tabs{display:flex;flex-direction:column;gap:7px;margin:0 0 16px;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:16px;position:sticky;top:0;z-index:20;box-shadow:0 8px 24px #0002}.tab{width:100%;text-align:left;white-space:normal;background:var(--panel2);color:var(--text);padding:13px 15px;border-radius:11px;border:1px solid var(--line);font-weight:700;cursor:pointer;transition:.15s}.tab.active{color:#06131b;background:var(--prim);transform:translateX(3px)}.tab:active{transform:scale(.98)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+input,textarea,select{width:100%;background:#091726;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px;margin:6px 0 10px;outline:none}
+textarea{min-height:100px;resize:vertical}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}
+small,.muted{color:var(--muted)}h2,h3{margin-top:0}.avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;background:#08121e;border:2px solid var(--prim)}
+.avatar.big{width:92px;height:92px}.userline{display:flex;gap:10px;align-items:center}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#20344e;color:var(--prim2);font-size:12px;margin:2px}
+.xp{height:9px;background:#07111d;border-radius:20px;overflow:hidden}.xp>i{display:block;height:100%;background:var(--prim);width:0}
+.topic,.msg,.auction,.mission,.shopitem{border:1px solid var(--line);background:#0d1b2c;border-radius:12px;padding:13px;margin:9px 0}
+.topic:hover{border-color:#315273}.topic h3{margin:0 0 5px}.content{white-space:pre-wrap;line-height:1.45}
+.reply{margin:8px 0 8px 22px;border-left:3px solid var(--prim);padding:9px 12px;background:#101f31;border-radius:0 10px 10px 0}
+.private{max-height:450px;overflow:auto}.bubble{padding:9px 12px;border-radius:12px;background:#172a42;max-width:78%;margin:7px}.bubble.me{margin-left:auto;background:#0f536b}.hidden{display:none!important}
+.auth{max-width:470px;margin:50px auto}.flash{position:fixed;right:18px;bottom:18px;background:#102a3e;border:1px solid var(--prim);padding:13px 16px;border-radius:12px;z-index:20}
+.stat{font-size:22px;font-weight:900}.empty{text-align:center;padding:28px;color:var(--muted)}
+.modal{position:fixed;inset:0;background:#0009;display:flex;align-items:center;justify-content:center;padding:18px;z-index:30}
+.modalbox{max-width:560px;width:100%;max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+.sectionSelect{display:none;width:100%;padding:12px;border-radius:12px;background:var(--card);color:var(--texto);border:1px solid var(--borde);font-weight:700;font-size:15px}
+.quickTabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;width:100%}
+@media(max-width:700px){.wrap{padding:12px}.tabs{position:sticky;top:0;overflow-x:auto;touch-action:auto}.tab{padding:10px 12px}.grid{grid-template-columns:1fr}}
+.inventoryCard{scroll-margin-top:90px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="flash" class="flash hidden"></div>
+
+<script>
+const DB_KEY="doroxen_complete_v2", SESSION_KEY="doroxen_session_v2";
+const DEFAULT_AVATAR="data:image/svg+xml;charset=UTF-8,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="100%" height="100%" fill="#122238"/><circle cx="80" cy="58" r="30" fill="#22b8f0"/><path d="M35 145c5-42 85-42 90 0" fill="#5fd4ff"/></svg>`);
+
+const ITEMS=[
+["Booster de Trivia","item","comun",200,"🚀","x2 DX en tu próxima trivia. Dura 30 min."],
+["Cofre de Pistas","item","comun",300,"🧰","Da 3 pistas en la próxima trivia difícil."],
+["Pase Incógnito 12h","item","item",100,"🥷","Nadie ve que visitaste la tienda ni que compraste durante 12 h."],
+["Pergamino de Reset","item","raro",400,"📜","Reinicia la tienda. Límite 1 por día."],
+["Poción de Suerte 1h","item","raro",500,"🍀","+5% de probabilidad de Épico o superior en el stock."],
+["Reparación x3","item","raro",600,"🔧","Incluye 3 reparaciones gratis."],
+["Fragmento de Sabio","item","epico",700,"🔮","Junta 5 para canjearlos por un objeto Épico aleatorio."],
+["Roba Puntos","item","epico",800,"🃏","Modificador para la próxima trivia competitiva."],
+["Alquiler de Slot 24h","item","epico",900,"🔒","Bloquea 1 objeto del stock para que no se vaya en el reset."],
+["Pase VIP 24h","item","legendario",1000,"👑","Las trivias dan x3 DX durante 24 h."],
+["Escudo de Deudor","item","legendario",1100,"🛡️","Protección virtual contra bloqueo por préstamo durante 24 h."],
+["Trivia Fantasma x5","item","legendario",1200,"👻","Participa anónimamente en 5 trivias."],
+["Corona del Sabio 30 días","item","mitico",1500,"👑","Marco dorado y nombre destacado durante 30 días."],
+["Paquete Espía 7 días","item","mitico",1600,"🕵️","Incógnito total y funciones de espionaje durante 7 días."],
+["Aura del Primer DX 30 días","item","mitico_divino",3500,"✨","Aura especial de 30 días con 9 espadas girando y partículas doradas."]
+].map((x,i)=>({id:"dx_"+(i+1),name:x[0],slot:x[1],rarity:x[2],price:x[3],emoji:x[4],desc:x[5],source:"tienda"}));
+
+const QUESTIONS=[
+["¿Cuál es el planeta más grande del sistema solar?","Júpiter",["Marte","Venus","Saturno"],"facil"],
+["¿Cuánto es 12 × 8?","96",["86","108","92"],"facil"],
+["¿Qué océano es el más grande?","Pacífico",["Atlántico","Índico","Ártico"],"facil"],
+["¿Cuál es el resultado de 15 + 27?","42",["32","52","38"],"facil"],
+["¿Qué gas necesitan principalmente las plantas para la fotosíntesis?","Dióxido de carbono",["Oxígeno","Helio","Nitrógeno"],"medio"],
+["¿Cuántos lados tiene un hexágono?","6",["5","7","8"],"facil"],
+["¿Cuál es la capital de Japón?","Tokio",["Kioto","Osaka","Seúl"],"facil"],
+["¿Qué instrumento tiene teclas blancas y negras?","Piano",["Violín","Trompeta","Flauta"],"facil"],
+["¿Qué órgano bombea la sangre?","Corazón",["Pulmón","Hígado","Riñón"],"facil"],
+["¿Cuál es el símbolo químico del oro?","Au",["Ag","Fe","Go"],"medio"],
+["¿Qué continente tiene más países?","África",["Europa","Asia","Oceanía"],"medio"],
+["¿Cuánto es 9²?","81",["72","18","99"],"facil"],
+["¿Qué planeta es conocido como el planeta rojo?","Marte",["Mercurio","Neptuno","Urano"],"facil"],
+["¿Cuál es la raíz cuadrada de 144?","12",["10","14","16"],"facil"],
+["¿Qué animal es conocido por cambiar de color para camuflarse?","Camaleón",["Delfín","Águila","Elefante"],"facil"],
+["¿Cuál es el idioma más hablado por número de hablantes nativos?","Chino mandarín",["Inglés","Español","Francés"],"medio"],
+["¿Qué metal es líquido a temperatura ambiente?","Mercurio",["Hierro","Cobre","Aluminio"],"medio"],
+["¿Cuántos minutos tiene una hora?","60",["50","70","100"],"facil"],
+["¿Qué estrella está en el centro de nuestro sistema?","Sol",["Sirio","Polaris","Vega"],"facil"],
+["¿Qué figura tiene tres lados?","Triángulo",["Cuadrado","Pentágono","Círculo"],"facil"],
+["¿Cuál es la fórmula del agua?","H₂O",["CO₂","O₂","NaCl"],"facil"],
+["¿Qué planeta tiene anillos muy visibles?","Saturno",["Mercurio","Venus","Marte"],"facil"],
+["¿Cuánto es 7 × 7?","49",["42","56","63"],"facil"],
+["¿Qué país tiene forma aproximada de bota?","Italia",["Grecia","Portugal","Noruega"],"medio"],
+["¿Cuál es el continente más grande?","Asia",["África","Europa","América"],"facil"],
+["¿Qué fuerza nos mantiene sobre la Tierra?","Gravedad",["Magnetismo","Fricción","Presión"],"medio"],
+["¿Qué parte de la planta absorbe agua del suelo?","Raíz",["Flor","Fruto","Hoja"],"facil"],
+["¿Qué número es primo?","17",["21","27","33"],"medio"],
+["¿Qué animal es un mamífero?","Delfín",["Tiburón","Pulpo","Cocodrilo"],"facil"],
+["¿Qué color resulta de mezclar azul y amarillo?","Verde",["Rojo","Morado","Naranja"],"facil"]
+].map((q,i)=>({id:"builtin_"+i,text:q[0],answer:q[1],options:[q[1],...q[2]],difficulty:q[3],author:"Doroxen"}));
+
+let db=loadDB(), session=localStorage.getItem(SESSION_KEY)||null, tab="perfil", activeChat=null, trivia=null;
+if(!Array.isArray(db.questions))db.questions=[];
+if(!db.triviaEvents||typeof db.triviaEvents!=="object")db.triviaEvents={};
+
+function loadDB(){
+try{
+const d=JSON.parse(localStorage.getItem(DB_KEY));
+if(d)return d;
+}catch(e){}
+return {users:{},topics:[],messages:[],questions:[],auctions:[],shop:null,history:[],notifications:[],triviaEvents:{},blackMarket:null};
+}
+
+function save(){localStorage.setItem(DB_KEY,JSON.stringify(db))}
+function me(){return session?db.users[session]:null}
+function uid(){return Math.random().toString(36).slice(2,9)+Date.now().toString(36)}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function fmt(t){return new Date(t).toLocaleString("es-PA",{dateStyle:"short",timeStyle:"short"})}
+function flash(s){const e=document.getElementById("flash");e.textContent=s;e.classList.remove("hidden");setTimeout(()=>e.classList.add("hidden"),2600)}
+function levelFor(xp){return Math.max(1,Math.floor(xp/500)+1)}
+function addXP(u,n){u.xp+=n;u.level=levelFor(u.xp)}
+function log(u,type,text,amount=0){db.history.unshift({id:uid(),user:u.id,type,text,amount,at:Date.now()});db.history=db.history.slice(0,300)}
+function notify(userId,text){db.notifications.push({id:uid(),userId,text,read:false,at:Date.now()})}
+
+function ensureUserShape(u){
+u.dx??=500;u.bank??=0;u.xp??=0;u.level=levelFor(u.xp);u.avatar??=DEFAULT_AVATAR;
+u.inventory??=[];u.equipped??={};u.missions??={};u.triviaBoosterUntil??=0;u.vipUntil??=0;u.achievements??=[];u.createdQuestions??=0;
+u.lastDaily??=0;u.incognito??=false;
+}
+
+function normalizeInventory(u){
+if(!Array.isArray(u.inventory))u.inventory=[];
+if(!u.equipped||typeof u.equipped!=="object"||Array.isArray(u.equipped))u.equipped={};
+u.inventory=u.inventory.filter(Boolean).map(it=>{
+const x=it.itemId?(ITEMS.find(i=>i.id===it.itemId)||it):it;
+if(!it.uid)it.uid=uid();
+if(!it.name)it.name=x.name||"Objeto";
+if(!it.slot)it.slot=x.slot||"item";
+if(!it.rarity)it.rarity=x.rarity||"comun";
+if(!it.desc)it.desc=x.desc||"Objeto permanente de Doroxen";
+it.locked=true;
+return it;
+});
+Object.keys(u.equipped).forEach(slot=>{
+if(!u.inventory.some(it=>it.uid===u.equipped[slot]&&(it.slot===slot||(it.itemId&&ITEMS.find(x=>x.id===it.itemId)?.slot===slot))))delete u.equipped[slot];
+});
+}
+
+Object.values(db.users).forEach(u=>{ensureUserShape(u);normalizeInventory(u)});save();
+
+function auth(){
+if(session&&db.users[session])return render();
+document.getElementById("app").innerHTML=`
+<div class="wrap auth">
+<div class="card">
+<div class="logo">Foro <span>Doroxen</span></div>
+<p class="muted">Foro + economía + trivia + mensajes privados.</p>
+<h2>Entrar</h2>
+<input id="loginUser" placeholder="Usuario">
+<input id="loginPass" type="password" placeholder="Contraseña">
+<button class="btn primary" onclick="login()">Entrar</button>
+<hr style="border-color:var(--line);margin:20px 0">
+<h2>Crear cuenta</h2>
+<input id="regUser" placeholder="Usuario (3-20 caracteres)">
+<input id="regPass" type="password" placeholder="Contraseña">
+<button class="btn green" onclick="register()">Crear cuenta</button>
+<p class="muted">Se permiten letras, números, punto y guion bajo. Ejemplo: <b>doroxen.24</b></p>
+</div>
+</div>`;
+}
+
+function register(){
+const name=document.getElementById("regUser").value.trim();
+const pass=document.getElementById("regPass").value;
+if(name.length<3||name.length>20){flash("El usuario debe tener entre 3 y 20 caracteres.");return}
+if(!/^[a-zA-Z0-9._]+$/.test(name)){flash("Solo se permiten letras, números, punto y guion bajo.");return}
+const key=name.toLowerCase();
+if(db.users[key]){flash("Ese usuario ya existe.");return}
+const u={id:key,username:name,password:pass,dx:500,bank:0,xp:0,level:1,avatar:DEFAULT_AVATAR,
+inventory:[],equipped:{},missions:{},achievements:[],createdQuestions:0,lastDaily:0,incognito:false};
+db.users[key]=u;session=key;localStorage.setItem(SESSION_KEY,session);save();
+flash("Cuenta creada. +500 DX iniciales.");render();
+}
+
+function login(){
+const name=document.getElementById("loginUser").value.trim().toLowerCase(),pass=document.getElementById("loginPass").value;
+const u=db.users[name];
+if(!u||u.password!==pass){flash("Usuario o contraseña incorrectos.");return}
+session=name;localStorage.setItem(SESSION_KEY,session);ensureUserShape(u);save();render();
+}
+
+function logout(){session=null;localStorage.removeItem(SESSION_KEY);activeChat=null;auth()}
+
+function nav(t){
+if(!t)return;
+const y=window.scrollY;
+tab=t;
+render();
+requestAnimationFrame(()=>{window.scrollTo(0,y)});
+}
+
+function render(){
+if(!me()){auth();return}
+ensureUserShape(me());normalizeInventory(me());processShop();processAuctions();
+const u=me();
+document.getElementById("app").innerHTML=`
+<div class="wrap">
+<header>
+<div class="logo">Foro <span>Doroxen</span></div>
+<div class="top">
+<span class="pill">💰 ${u.dx} DX</span><span class="pill">🏦 ${u.bank} DX</span>
+<span class="pill">Nv. ${u.level}</span>
+<button class="btn" onclick="logout()">Salir</button>
+</div>
+</header>
+<div class="tabs" id="categoryBar" aria-label="Categorías">
+${["perfil","temas","mensajes","misiones","trivia","tienda","subastas","mercado","banco","prestamo","arcade","inventario","ranking","buscar"].map(t=>`<button type="button" class="tab ${tab===t?"active":""}" data-tab="${t}" onclick="nav('${t}')">${label(t)}</button>`).join("")}
+</div>
+<main>${view()}</main>
+</div>`;
+}
+
+function label(t){
+return ({
+perfil:"👤 Perfil",temas:"🧵 Temas",mensajes:"✉️ Privados",misiones:"🎯 Misiones",
+trivia:"🧠 Trivia",tienda:"🛒 Tienda",subastas:"🔨 Subastas",mercado:"😈 Mercado Negro",
+banco:"🏦 Banco",prestamo:"💳 Préstamo",arcade:"🎮 Arcade",inventario:"🎒 Inventario",
+ranking:"🏆 Ranking",buscar:"🔎 Buscar"
+})[t]||t;
+}
+
+function view(){
+switch(tab){
+case"perfil":return profileView();
+case"temas":return topicsView();
+case"mensajes":return messagesView();
+case"misiones":return missionsView();
+case"trivia":return triviaView();
+case"tienda":return shopView();
+case"subastas":return auctionsView();
+case"mercado":return blackMarketView();
+case"banco":return bankView();
+case"prestamo":return bankLoanView();
+case"arcade":return arcadeView();
+case"inventario":return inventoryView();
+case"ranking":return rankingView();
+case"buscar":return searchView();
+}
+}
+
+function profileView(){
+const u=me(),pct=Math.min(100,(u.xp%500)/5),unread=db.notifications.filter(n=>n.userId===u.id&&!n.read).length;
+return `<div class="grid">
+<div class="card">
+<div class="userline"><img class="avatar big" src="${u.avatar}"><div><h2>${esc(u.username)}</h2><small>ID: ${esc(u.id)}</small><div>${u.incognito?"🕶️ Incógnito":"🌐 Visible"} · 🔔 ${unread} notificaciones</div></div></div>
+<p>💰 <b>${u.dx} DX</b> · 🏦 ${u.bank} DX · ⭐ ${u.xp} XP · Nivel ${u.level}</p>
+<div class="xp"><i style="width:${pct}%"></i></div>
+<small>${u.xp%500}/500 XP para el siguiente nivel</small>
+<div class="row" style="margin-top:12px">
+<button class="btn" onclick="daily()">🎁 Recompensa diaria</button>
+<button class="btn" onclick="document.getElementById('avatarFile').click()">🖼️ Cambiar foto</button>
+<button class="btn" onclick="resetAvatar()">↩️ Avatar default</button>
+<input id="avatarFile" type="file" accept="image/*" hidden onchange="avatarUpload(event)">
+</div>
+</div>
+<div class="card"><h3>🔔 Notificaciones</h3>${notificationsView()}</div>
+<div class="card"><h3>🏅 Logros</h3>${achievementsView()}</div>
+</div>`;
+}
+
+function notificationsView(){
+const ns=db.notifications.filter(n=>n.userId===me().id).slice(-10).reverse();
+return ns.length?ns.map(n=>`<div class="msg"><b>${esc(n.text)}</b><br><small>${fmt(n.at)}</small></div>`).join(""):`<div class="empty">No hay notificaciones.</div>`;
+}
+
+function achievementsView(){
+const all=[
+["first","Primer paso","Crear tu cuenta"],
+["dx1000","Ahorrista","Llegar a 1000 DX"],
+["level5","Veterano","Llegar al nivel 5"],
+["trivia10","Cerebrito","Jugar 10 trivias"],
+["items5","Coleccionista","Tener 5 objetos"],
+["bank","Banquero","Depositar DX"],
+["auction","Subastador","Crear una subasta"],
+["creator","Creador","Crear una pregunta"],
+["equipped","Preparado","Equipar un objeto"]
+];
+return all.map(a=>`<span class="badge">${me().achievements.includes(a[0])?"🏅":"🔒"} ${a[1]}</span>`).join("");
+}
+
+function ach(id){
+const u=me();
+if(!u.achievements.includes(id)){u.achievements.push(id);notify(u.id,"🏅 Logro desbloqueado: "+id);save()}
+}
+
+function checkAch(){
+const u=me();
+if(u.dx>=1000)ach("dx1000");
+if(u.level>=5)ach("level5");
+if(u.inventory.length>=5)ach("items5");
+if(u.bank>0)ach("bank");
+if(u.createdQuestions>0)ach("creator");
+if(Object.keys(u.equipped).length)ach("equipped");
+}
+
+function topicsView(){
+return `<div class="card"><div class="row between"><div><h2>🧵 Foro</h2><p class="muted">Crea un hilo y responde los hilos de otras personas.</p></div><button class="btn primary" onclick="newTopic()">＋ Nuevo hilo</button></div></div>
+<div>${db.topics.slice().reverse().map(t=>topicCard(t)).join("")||`<div class="card empty">Todavía no hay hilos. ¡Crea el primero!</div>`}</div>`;
+}
+
+function topicCard(t){
+const author=db.users[t.author],replies=t.replies?.length||0;
+return `<div class="card topic" onclick="openTopic('${t.id}')">
+<div class="userline"><img class="avatar" src="${author?.avatar||DEFAULT_AVATAR}"><div><h3>${esc(t.title)}</h3><small>por ${esc(author?.username||"usuario")} · ${fmt(t.at)}</small></div></div>
+<p>${esc(t.body).slice(0,220)}${t.body.length>220?"…":""}</p><span class="badge">💬 ${replies} respuestas</span><span class="badge">👁️ ${t.views||0}</span>
+</div>`;
+}
+
+function newTopic(){
+const title=prompt("Título del hilo:");
+if(!title?.trim())return;
+const body=prompt("Escribe el contenido:");
+if(!body?.trim())return;
+const t={id:uid(),author:me().id,title:title.trim().slice(0,100),body:body.trim().slice(0,3000),at:Date.now(),views:0,replies:[]};
+db.topics.push(t);addXP(me(),30);log(me(),"tema","Creaste el hilo: "+t.title);save();render();openTopic(t.id);
+}
+
+function openTopic(id){
+const t=db.topics.find(x=>x.id===id);if(!t)return;t.views++;
+const a=db.users[t.author];
+const replies=(t.replies||[]).map(r=>{
+const u=db.users[r.author];
+return `<div class="reply"><div class="userline"><img class="avatar" src="${u?.avatar||DEFAULT_AVATAR}"><div><b>${esc(u?.username||"Usuario")}</b><br><small>${fmt(r.at)}</small></div></div><div class="content" style="margin-top:8px">${esc(r.body)}</div></div>`;
+}).join("");
+document.getElementById("app").innerHTML+=`<div class="modal" id="topicModal"><div class="modalbox">
+<button class="btn" onclick="document.getElementById('topicModal').remove();render()">✕ Cerrar</button>
+<div class="card"><div class="userline"><img class="avatar" src="${a?.avatar||DEFAULT_AVATAR}"><div><h2>${eHTML
+
